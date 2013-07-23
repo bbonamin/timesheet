@@ -1,10 +1,11 @@
+# coding: utf-8
 require 'date'
 
-Shoes.app :width => 250, :height => 600, :margin => 10 do    
+Shoes.app :width => 900, :height => 600, :margin => 10 do    
   @users = [
       {id: 1, username: 'bbonamin', password: '123'},
       {id: 2, username: 'pancheto', password: '456'},
-      {id: 3, username: 'magnetto', password: '789'}
+      {id: 3, username: 'magneto', password: '789'}
     ]
 
   @shifts = [
@@ -20,7 +21,25 @@ Shoes.app :width => 250, :height => 600, :margin => 10 do
     title 'Timesheet'
     stack width: '50%' do
       button "Entrada" do
-        answer ask("Código: ")
+        answer = ask("Usuario: ")
+        user = @users.select{|user| user[:username] == answer}.first
+        if user.nil?
+          alert('Usuario no valido')
+        else
+          password = ask('Codigo')
+          if user[:password] == password
+            open_shift = @shifts.select{|shift| shift[:user_id] == user[:id] && shift[:end_date] == nil}.first
+            if open_shift.nil?
+              new_shift = {user_id: user[:id], start_date: Time.now, end_date: nil}
+              @shifts << new_shift
+              refresh_users_and_shifts
+            else
+              alert 'Ya hay un turno abierto!'
+            end
+          else
+            alert 'Error de autenticación!'
+          end
+        end
       end
     end
 
@@ -31,7 +50,7 @@ Shoes.app :width => 250, :height => 600, :margin => 10 do
     end
   end
 
-  flow width: 240, margin: 10 do
+  flow width: 900, margin: 10 do
     title 'Admin'
     stack width: '100%' do
       subtitle 'Usuarios'
@@ -47,23 +66,32 @@ Shoes.app :width => 250, :height => 600, :margin => 10 do
       button 'Agregar...' do
         add_user
       end
-
-  #   button "Exportar datos" do
-  #     answer ask("Código: ")
-  #   end
-
+    end
+    stack width: '100%' do
+      subtitle 'Turnos'
+      @gui_shifts = para
     end
   end
   
   def delete_user(user)
     @users.delete user
-    refresh_users
+    refresh_users_and_shifts
   end
 
-  def refresh_users
+  def delete_shift(shift)
+    @shifts.delete shift
+    refresh_users_and_shifts
+  end
+
+  def refresh_users_and_shifts
     @gui_users.replace *(
       @users.map { |user|
-        [ user[:username], '  ' ] + [ link('Borrar') { delete_user user } ] + [ "\n" ]
+        [ user[:username], '  ', user[:password] ] + [ link('Borrar') { delete_user user } ] + [ "\n" ]
+      }.flatten
+    )
+    @gui_shifts.replace *(
+      @shifts.map { |shift|
+        [ shift[:user_id], '  ', shift[:start_date], ' ', shift[:end_date] ] + [ link('Borrar') { delete_shift shift } ] + [ "\n" ]
       }.flatten
     )
   end
@@ -73,14 +101,8 @@ Shoes.app :width => 250, :height => 600, :margin => 10 do
 
     @users << new_user
     @username.text, @password.text = nil
-    refresh_users
+    refresh_users_and_shifts
   end
 
-  
-
-  def answer(v)
-    @answer.replace v.inspect
-  end
-
-  refresh_users
+  refresh_users_and_shifts
 end
