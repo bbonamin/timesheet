@@ -33,6 +33,7 @@ Shoes.app :width => 900, :height => 600, :margin => 10 do
               new_shift = {user_id: user[:id], start_date: Time.now, end_date: nil}
               @shifts << new_shift
               refresh_users_and_shifts
+              alert 'Turno abierto!'
             else
               alert 'Ya hay un turno abierto!'
             end
@@ -45,7 +46,25 @@ Shoes.app :width => 900, :height => 600, :margin => 10 do
 
     stack width: '50%' do
       button "Salida" do
-        answer ask("Código: ")
+        answer = ask("Usuario: ")
+        user = @users.select{|user| user[:username] == answer}.first
+        if user.nil?
+          alert('Usuario no valido')
+        else
+          password = ask('Codigo')
+          if user[:password] == password
+            open_shift = @shifts.select{|shift| shift[:user_id] == user[:id] && shift[:end_date] == nil}.first
+            if open_shift.nil?
+              alert 'No hay un turno abierto!'
+            else
+              open_shift[:end_date] = Time.now
+              refresh_users_and_shifts
+              alert 'Turno cerrado!'
+            end
+          else
+            alert 'Error de autenticación!'
+          end
+        end
       end
     end
   end
